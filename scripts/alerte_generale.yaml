@@ -1,0 +1,80 @@
+alias: Alerte Générale
+description: Pilotage centralisé avec gestion dynamique de la durée
+fields:
+  color_name:
+    name: Couleur
+    default: rouge
+    selector:
+      select:
+        options:
+          - rouge
+          - orange
+          - bleu
+          - vert
+  sirene_tone:
+    name: Tonalité Sirène
+    default: "1"
+    selector:
+      text: {}
+  duration:
+    name: Durée
+    description: Durée de l'alerte en secondes
+    default: 300
+    selector:
+      number:
+        min: 10
+        max: 3600
+        unit_of_measurement: seconds
+        mode: box
+  check_presence:
+    name: Surveiller la présence ?
+    default: true
+    selector:
+      boolean: {}
+sequence:
+  - alias: Initialisation des variables
+    variables:
+      v_color: "{{ color_name | default('rouge') }}"
+      v_tone: "{{ sirene_tone | default('1') }}"
+      v_duration: "{{ duration | default(300) | int }}"
+      v_check: "{{ check_presence | default(true) }}"
+  - alias: Vérifier les conditions avant déclenchement
+    condition: or
+    conditions:
+      - condition: template
+        value_template: "{{ v_check == false }}"
+        alias: check_presence désactivé
+      - condition: state
+        entity_id: input_boolean.present
+        state: "on"
+        alias: Présence détectée
+  - alias: Préparation de l'alerte
+    sequence:
+      - alias: Log du déclenchement
+        action: system_log.write
+        data:
+          level: info
+          logger: alerte_generale
+          message: >-
+            Alerte générale déclenchée: 
+            Couleur={{ v_color }}, 
+            Tonalité={{ v_tone }}, 
+            Durée={{ v_duration }}s, 
+            CheckPresence={{ v_check }}
+      - delay:
+          seconds: 1
+      - alias: Note utilisateur
+        action: persistent_notification.create
+        data:
+          title: Alerte Générale
+          message: >-
+            L'alerte générale a été déclenchée.
+            
+            **Paramètres :**
+            - Couleur: {{ v_color }}
+            - Tonalité: {{ v_tone }}
+            - Durée: {{ v_duration }}s
+            
+            **À personnaliser :**
+            Intégrez vos scripts de gyrophare, sirènes et lumières de sécurité.
+mode: single

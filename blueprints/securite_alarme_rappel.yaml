@@ -1,0 +1,43 @@
+blueprint:
+  name: Sécurité - Rappel non-réarmé
+  description: Notifie périodiquement si l'alarme est toujours en état triggered.
+  domain: automation
+  input:
+    alarm_panel:
+      name: Panel d'alarme
+      selector:
+        entity:
+          domain: alarm_control_panel
+    alert_title:
+      name: Titre de l'alerte
+    dashboard_url:
+      name: URL du Dashboard
+      default: /dashboard-maison/securite-incendie
+    reminder_pattern:
+      name: Fréquence de rappel (Time Pattern)
+      description: "Format : /[1-59] /15 pour toutes les 15min"
+      default: "/15"
+      selector:
+        text:
+
+mode: single
+
+triggers:
+  - alias: Sécurité – Rappel périodique
+    trigger: time_pattern
+    minutes: !input reminder_pattern
+
+conditions:
+  - alias: Sécurité – Vérification état triggered
+    condition: state
+    entity_id: !input alarm_panel
+    state: triggered
+
+actions:
+  - alias: Sécurité – Notification Smartphone Rappel
+    action: script.notification_smartphone
+    data:
+      title: !input alert_title
+      message: "L'alarme n'a pas été réarmée. Vérifiez et réarmez-la dès que possible."
+      severity: critical
+      click_url: !input dashboard_url

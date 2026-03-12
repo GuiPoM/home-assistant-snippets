@@ -1,0 +1,43 @@
+{% macro format_sensors(sensor_input) %}
+  {%- if sensor_input is mapping -%}
+    {{ format_sensors_list(sensor_input.keys() | list) }}
+  {%- elif sensor_input is string -%}
+    {{ format_sensors_list([sensor_input]) }}
+  {%- elif sensor_input is iterable -%}
+    {{ format_sensors_list(sensor_input) }}
+  {%- else -%}
+    Aucun capteur détecté
+  {%- endif -%}
+{% endmacro %}
+
+{% macro format_sensors_list(sensor_list) %}
+  {%- if sensor_list is not iterable or sensor_list | length == 0 -%}
+    Aucun détail disponible
+  {%- else -%}
+    {%- set ns = namespace(items=[]) -%}
+    {%- for blocker in sensor_list -%}
+      {%- if states(blocker) != 'unknown' -%}
+        {%- set members = state_attr(blocker, 'entity_id') -%}
+        {%- if members is iterable and members is not string -%}
+          {%- set active_members = members | select('is_state', 'on') | list -%}
+          {%- for sub_entity in (active_members if active_members | length > 0 else [blocker]) -%}
+            {%- set a = area_name(sub_entity) -%}
+            {%- set n = state_attr(sub_entity, 'friendly_name') or sub_entity -%}
+            {%- set ns.items = ns.items + [(a ~ " : " ~ n) if a else n] -%}
+          {%- endfor -%}
+        {%- else -%}
+          {%- set a = area_name(blocker) -%}
+          {%- set n = state_attr(blocker, 'friendly_name') or blocker -%}
+          {%- set ns.items = ns.items + [(a ~ " : " ~ n) if a else n] -%}
+        {%- endif -%}
+      {%- else -%}
+        {%- set ns.items = ns.items + [blocker ~ " (entité introuvable)"] -%}
+      {%- endif -%}
+    {%- endfor -%}
+    {%- if ns.items | length > 0 -%}
+      {{ "- " ~ ns.items | unique | join('\n- ') }}
+    {%- else -%}
+      Aucun détail disponible
+    {%- endif -%}
+  {%- endif -%}
+{% endmacro %}

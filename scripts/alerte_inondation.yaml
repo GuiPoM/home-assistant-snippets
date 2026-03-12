@@ -1,0 +1,11 @@
+alias: Alerte Inondation
+description: Déclenche l'alerte inondation
+sequence:
+  - action: script.alerte_generale
+    metadata: {}
+    data:
+      color_name: bleu
+      sirene_tone: "3"
+      duration: 300
+      check_presence: true
+icon: mdi:water-alert

@@ -1,0 +1,47 @@
+blueprint:
+  name: Sécurité - Déclenchement du Panel d'Alarme sur Capteur
+  description: Bascule le panel en triggered après un délai de détection configurable.
+  domain: automation
+  input:
+    monitored_sensors:
+      name: Capteurs à surveiller
+      selector:
+        entity:
+          multiple: true
+    alarm_panel:
+      name: Panel d'alarme
+      selector:
+        entity:
+          domain: alarm_control_panel
+    delay:
+      name: Délai de confirmation
+      description: Temps pendant lequel le capteur doit rester actif avant déclenchement.
+      default: 5
+      selector:
+        number:
+          min: 0
+          max: 60
+          unit_of_measurement: seconds
+          mode: slider
+
+mode: single
+
+triggers:
+  - alias: Détection maintenue selon délai
+    trigger: state
+    entity_id: !input monitored_sensors
+    to: "on"
+    for:
+      seconds: !input delay
+
+conditions:
+  - alias: Panel non déjà déclenché
+    condition: state
+    entity_id: !input alarm_panel
+    state: disarmed
+
+actions:
+  - alias: Passage du panel en triggered
+    target:
+      entity_id: !input alarm_panel
+    action: alarm_control_panel.alarm_trigger

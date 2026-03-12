@@ -1,0 +1,63 @@
+alias: Notification Smartphone
+description: Gestion des alertes selon différents niveaux de sévérité
+fields:
+  title:
+    name: Titre
+    default: Alerte Maison
+    selector:
+      text: {}
+  message:
+    name: Message
+    default: Message d'alerte sans description
+    selector:
+      text: {}
+  severity:
+    name: Sévérité
+    default: normal
+    selector:
+      select:
+        options:
+          - label: Normal (Notification standard)
+            value: normal
+          - label: Important (Notification haute priorité)
+            value: important
+          - label: Critique (Notification urgente)
+            value: critical
+  click_url:
+    name: Action au clic
+    description: "Chemin Lovelace (ex: /lovelace-securite) ou URL complète"
+    selector:
+      text: {}
+sequence:
+  - alias: Vérifier la sévérité et envoyer notification
+    choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ severity in ['critical'] }}"
+        sequence:
+          - alias: Notification critique
+            action: notify.notify
+            data:
+              title: "🚨 {{ title }}"
+              message: "{{ message }}"
+              data:
+                priority: high
+      - conditions:
+          - condition: template
+            value_template: "{{ severity in ['important'] }}"
+        sequence:
+          - alias: Notification importante
+            action: notify.notify
+            data:
+              title: "⚠️ {{ title }}"
+              message: "{{ message }}"
+              data:
+                priority: normal
+    default:
+      - alias: Notification standard
+        action: notify.notify
+        data:
+          title: "ℹ️ {{ title }}"
+          message: "{{ message }}"
+mode: parallel
+max: 10

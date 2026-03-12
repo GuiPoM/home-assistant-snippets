@@ -1,0 +1,50 @@
+blueprint:
+  name: Sécurité - Actions une fois l'alarme déclenchée
+  description: Gère les actions via une notification et un script externe
+  domain: automation
+  input:
+    alarm_panel:
+      name: Panel d'alarme
+      selector:
+        entity:
+          domain: alarm_control_panel
+    monitored_sensors:
+      name: Capteurs à surveiller
+      selector:
+        entity:
+          multiple: true
+    alert_title:
+      name: Titre de la notification
+    alert_script_local:
+      name: Script d'alerte locale
+      selector:
+        entity:
+          domain: script
+
+mode: single
+
+variables:
+  monitored_entities: !input monitored_sensors
+
+triggers:
+  - trigger: state
+    entity_id: !input alarm_panel
+    to: triggered
+
+actions:
+  - parallel:
+      - action: script.notification_smartphone
+        data:
+          title: !input alert_title
+          severity: critical
+          message: >-
+            {% from 'macros.jinja' import format_sensors %}
+            Alarme déclenchée ! 
+            {% set panel_sensors = state_attr(trigger.entity_id, 'sensors') %}
+            {% if panel_sensors %}
+              Capteur : {{ format_sensors(panel_sensors) }}
+            {% else %}
+              {% set active = monitored_entities | select('is_state', 'on') | list %}
+              Capteur : {{ format_sensors(active) }}
+            {% endif %}
+      - action: !input alert_script_local
