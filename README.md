@@ -25,6 +25,21 @@
 
 **Fichiers fournis :** 3 blueprints + 3 scripts + macros Jinja
 
+### 📱 Notifications Smartphone + Home Assistant
+**Un script central pour toutes vos notifications — push, mail, SMS, Do Not Disturb !**
+
+[![Watch on YouTube](https://img.shields.io/badge/YouTube-FF0000?style=flat&logo=youtube&logoColor=white)](https://youtu.be/zj1U9-bSfXE)
+[![Code on GitHub](https://img.shields.io/badge/Code-video/notifications--smartphone-blue)](https://github.com/GuiPoM/home-assistant-snippets/tree/video/notifications-smartphone)
+
+**Ce que vous apprendrez :**
+- ✅ Centraliser toutes vos notifications dans un seul script
+- ✅ Gérer 5 niveaux de sévérité (du push discret au SMS d'urgence)
+- ✅ Bypasser le mode Ne Pas Déranger Android avec `alarm_stream`
+- ✅ Ajouter des boutons d'action interactifs dans vos notifications
+- ✅ Piloter le DND de votre téléphone depuis Home Assistant
+
+**Fichiers fournis :** 2 scripts
+
 ---
 
 ## 🚀 Démarrage Rapide
@@ -33,7 +48,7 @@
 
 ```bash
 # Clonez la branche vidéo
-git clone --branch video/ikea-klippbok https://github.com/GuiPoM/home-assistant-snippets.git
+git clone --branch video/notifications-smartphone https://github.com/GuiPoM/home-assistant-snippets.git
 cd home-assistant-snippets
 
 # Consultez le README pour les instructions
@@ -50,7 +65,8 @@ cat README.md
 ├── 📄 CLAUDE.md                    # Instructions de travail
 ├── 📄 AGENT.md                     # Directives d'audit
 └── 🎬 Branches vidéo (video/*)
-    └── video/ikea-klippbok/        # Code complet + documentation
+    ├── video/ikea-klippbok/        # Code complet + documentation
+    └── video/notifications-smartphone/  # Code complet + documentation
 ```
 
 **Chaque branche vidéo est indépendante** - Vous pouvez clone une branche spécifique sans les autres.
@@ -146,4 +162,4 @@ D'autres tutoriels vidéo seront ajoutés régulièrement. Restez à l'écoute!
 
 ---
 
-**Dernière mise à jour :** Mars 2026 | **Créé avec ❤️ pour la communauté Home Assistant**
+**Dernière mise à jour :** Avril 2026 | **Créé avec ❤️ pour la communauté Home Assistant**
