@@ -1,0 +1,46 @@
+alias: Mobile — Contrôle du mode Ne Pas Déranger
+description: >
+  Pilote le mode Do Not Disturb (Ne Pas Déranger) du smartphone
+  directement depuis Home Assistant, via une commande système
+  de l'application Companion.
+
+  Ce n'est pas une notification visible — c'est une commande technique
+  envoyée à l'application HA Companion sur Android.
+
+  Usage typique :
+    - Activation au passage en mode dodo (via automatisation)
+    - Désactivation au réveil
+    - Activation lors d'une scène "je regarde un film"
+
+  A personnaliser :
+    - YOUR_MOBILE_APP_DEVICE : service de notification de votre téléphone
+                               (ex: notify.mobile_app_sm_s916b)
+
+  Valeurs DND disponibles (paramètre status) :
+    - priority_only : Active le DND (priorité uniquement — alarmes passent)
+    - off           : Désactive le DND
+
+fields:
+  status:
+    name: Statut DND
+    description: Action à effectuer sur le mode Ne Pas Déranger
+    default: priority_only
+    required: true
+    selector:
+      select:
+        options:
+          - label: "Mettre en sourdine (activer DND)"
+            value: priority_only
+          - label: "Rétablir le son (désactiver DND)"
+            value: "off"
+
+sequence:
+  - alias: Envoi commande DND au smartphone
+    action: YOUR_MOBILE_APP_DEVICE
+    data:
+      message: command_dnd
+      data:
+        tag: dnd_command
+        command: "{{ status }}"
+
+mode: single

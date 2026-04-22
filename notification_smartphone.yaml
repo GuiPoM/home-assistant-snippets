@@ -1,0 +1,223 @@
+alias: Notification Smartphone
+description: >
+  Gestion des notifications Android sur 5 niveaux de sévérité.
+  Un seul point d'entrée pour toutes vos automatisations — push, mail, SMS,
+  bypass Do Not Disturb, image, tag, actions interactives.
+
+  Niveaux disponibles :
+    - normal         : Push seul, canal général, pas de DND
+    - important_push : Push seul, canal général, pas de DND
+    - important      : Push + Mail, canal général, pas de DND
+    - critical_push  : Push seul, alarm_stream, bypass DND
+    - critical       : Push + Mail + SMS, alarm_stream, bypass DND
+
+  A personnaliser :
+    - YOUR_MOBILE_APP_DEVICE : service de notification de votre téléphone
+                               (ex: notify.mobile_app_sm_s916b)
+    - YOUR_NOTIFY_MAIL       : service mail configuré dans HA
+                               (ex: notify.smtp_proton)
+    - YOUR_NOTIFY_SMS        : service SMS configuré dans HA
+                               (ex: notify.free_mobile)
+
+fields:
+  title:
+    name: Titre
+    description: Titre de la notification
+    default: "Alerte Maison"
+    required: true
+    selector:
+      text: {}
+  message:
+    name: Message
+    description: Corps du message
+    default: "Message sans description"
+    required: true
+    selector:
+      text:
+        multiline: true
+  severity:
+    name: Sévérité
+    description: Niveau de criticité — détermine les canaux et le comportement DND
+    default: normal
+    required: true
+    selector:
+      select:
+        options:
+          - label: "Normal (push discret)"
+            value: normal
+          - label: "Important Push (push seul, haute priorité)"
+            value: important_push
+          - label: "Important (push + mail)"
+            value: important
+          - label: "Critical Push (push DND bypass)"
+            value: critical_push
+          - label: "Critical (push DND + mail + SMS)"
+            value: critical
+  click_url:
+    name: Action au clic
+    description: "Chemin Lovelace (ex: /dashboard-maison/securite) ou URL externe"
+    required: false
+    selector:
+      text: {}
+  tag:
+    name: Tag
+    description: "Remplace une notification existante avec le même tag (évite l'empilement)"
+    required: false
+    selector:
+      text: {}
+  image_url:
+    name: Image URL
+    description: "URL d'une image à afficher dans la notification (ex: snapshot caméra)"
+    required: false
+    selector:
+      text: {}
+  actions:
+    name: Actions
+    description: "Liste de boutons interactifs (format liste YAML : [{action: MON_ACTION, title: Mon Bouton}])"
+    required: false
+    selector:
+      object: {}
+
+sequence:
+  # ─── Pré-calcul des variables selon la sévérité ───────────────────────────
+  - alias: Précalcul des variables d'exécution
+    variables:
+      # Icône selon sévérité
+      notif_icon: >
+        {% if severity in ['critical', 'critical_push'] %}
+          mdi:alert-circle
+        {% elif severity in ['important', 'important_push'] %}
+          mdi:alert
+        {% else %}
+          mdi:information
+        {% endif %}
+      # Couleur selon sévérité
+      notif_color: >
+        {% if severity in ['critical', 'critical_push'] %}
+          red
+        {% elif severity in ['important', 'important_push'] %}
+          orange
+        {% else %}
+          blue
+        {% endif %}
+      # Priority et TTL pour livraison immédiate sur Android
+      notif_priority: >
+        {% if severity in ['critical', 'critical_push'] %}
+          high
+        {% else %}
+          normal
+        {% endif %}
+      notif_ttl: >
+        {% if severity in ['critical', 'critical_push'] %}
+          0
+        {% else %}
+          300
+        {% endif %}
+      # Canal Android : alarm_stream bypass DND, general pour le reste
+      notif_channel: >
+        {% if severity in ['critical', 'critical_push'] %}
+          alarm_stream
+        {% else %}
+          general
+        {% endif %}
+      notif_media_stream: >
+        {% if severity in ['critical', 'critical_push'] %}
+          alarm_stream
+        {% else %}
+          default
+        {% endif %}
+      # Image optionnelle
+      notif_image: >
+        {% if image_url is defined and image_url %}
+          {{ image_url }}
+        {% else %}
+          {{ None }}
+        {% endif %}
+      # Construction du dictionnaire d'actions si fourni
+      notif_actions: >
+        {% if actions is defined and actions %}
+          {{ actions }}
+        {% else %}
+          {{ [] }}
+        {% endif %}
+      # Faut-il envoyer un mail ?
+      send_mail: "{{ severity in ['important', 'critical'] }}"
+      # Faut-il envoyer un SMS ?
+      send_sms: "{{ severity == 'critical' }}"
+      # Y a-t-il des actions définies ?
+      has_actions: "{{ notif_actions | length > 0 }}"
+
+  # ─── Bloc 1 : Push Android standard (sans actions) ────────────────────────
+  - alias: Push Android — notification standard
+    if:
+      - condition: template
+        value_template: "{{ not has_actions }}"
+    then:
+      - action: YOUR_MOBILE_APP_DEVICE
+        data:
+          title: "{{ title }}"
+          message: "{{ message }}"
+          data:
+            icon_url: "{{ notif_icon }}"
+            color: "{{ notif_color }}"
+            priority: "{{ notif_priority }}"
+            ttl: "{{ notif_ttl }}"
+            channel: "{{ notif_channel }}"
+            media_stream: "{{ notif_media_stream }}"
+            clickAction: "{{ click_url | default('') }}"
+            tag: "{{ tag | default('') }}"
+            image: "{{ notif_image | default('') }}"
+
+  # ─── Bloc 2 : Push Android avec actions (push_data requis) ────────────────
+  # Note : alarm_stream + actions nécessite de passer par push_data sur Android
+  - alias: Push Android — notification avec actions
+    if:
+      - condition: template
+        value_template: "{{ has_actions }}"
+    then:
+      - action: YOUR_MOBILE_APP_DEVICE
+        data:
+          title: "{{ title }}"
+          message: "{{ message }}"
+          data:
+            icon_url: "{{ notif_icon }}"
+            color: "{{ notif_color }}"
+            clickAction: "{{ click_url | default('') }}"
+            tag: "{{ tag | default('') }}"
+            image: "{{ notif_image | default('') }}"
+            push:
+              data:
+                priority: "{{ notif_priority }}"
+                ttl: "{{ notif_ttl }}"
+                channel: "{{ notif_channel }}"
+                media_stream: "{{ notif_media_stream }}"
+            actions: "{{ notif_actions }}"
+
+  # ─── Bloc 3 : Mail (niveaux important et critical) ────────────────────────
+  - alias: Envoi mail si sévérité suffisante
+    if:
+      - condition: template
+        value_template: "{{ send_mail }}"
+    then:
+      - action: YOUR_NOTIFY_MAIL
+        data:
+          title: "{{ notif_icon }} {{ title }}"
+          message: >
+            {{ message }}
+            {% if notif_image %}
+
+            Image : {{ notif_image }}
+            {% endif %}
+
+  # ─── Bloc 4 : SMS (niveau critical uniquement) ────────────────────────────
+  - alias: Envoi SMS si sévérité critique
+    if:
+      - condition: template
+        value_template: "{{ send_sms }}"
+    then:
+      - action: YOUR_NOTIFY_SMS
+        data:
+          message: "{{ title }} — {{ message }}"
+
+mode: parallel
+max: 10
