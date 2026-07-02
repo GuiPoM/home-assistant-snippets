@@ -1,0 +1,142 @@
+alias: Annonce Vocale Technique
+description: >-
+  Joue un message vocal sur les enceintes. Gere presence, routing, volume, TTS
+  et restauration.
+fields:
+  message:
+    name: Message
+    description: Texte pret a diffuser
+    required: true
+    selector:
+      text: {}
+  tts_engine:
+    name: Moteur TTS
+    required: true
+    selector:
+      select:
+        options:
+          - label: Google TTS
+            value: tts.google_en_com
+          - label: Piper (GLaDOS)
+            value: tts.piper
+  target_speakers:
+    name: Enceintes cibles
+    description: >-
+      Laisser vide pour la selection automatique selon la presence.
+      Indiquer une seule enceinte ou plusieurs (groupe auto).
+    selector:
+      select:
+        multiple: true
+        options:
+          - label: Enceinte 1 (ex. bureau)
+            value: media_player.YOUR_SPEAKER_1
+          - label: Enceinte 2 (ex. couloir)
+            value: media_player.YOUR_SPEAKER_2
+  volume_level:
+    name: Volume
+    default: 0.5
+    selector:
+      number:
+        min: 0
+        max: 1
+        step: 0.05
+  force_announcement:
+    name: Mode force
+    description: >-
+      Si true, ignore les verifications de presence et mode dodo.
+    selector:
+      boolean: {}
+sequence:
+  - alias: Definition des variables
+    variables:
+      is_forced: "{{ force_announcement | default(false) | bool(false) }}"
+      engine: "{{ tts_engine | default('tts.google_en_com') }}"
+      target_volume: "{{ volume_level | default(0.5) | float }}"
+      tts_language: "{{ 'fr' if engine == 'tts.google_en_com' else '' }}"
+      tts_options: "{{ {'voice': 'fr_FR-glados-medium'} if engine == 'tts.piper' else {} }}"
+
+  - alias: Verification presence
+    if:
+      - condition: and
+        conditions:
+          - condition: state
+            entity_id: input_boolean.YOUR_PRESENCE_BOOLEAN
+            state: "off"
+          - condition: template
+            value_template: "{{ not is_forced }}"
+    then:
+      - stop: Utilisateur absent
+
+  - alias: Verification mode dodo
+    if:
+      - condition: and
+        conditions:
+          - condition: state
+            entity_id: input_boolean.YOUR_SLEEP_MODE_BOOLEAN
+            state: "on"
+          - condition: template
+            value_template: "{{ not is_forced }}"
+    then:
+      - stop: Mode dodo active
+
+  - alias: Resolution cible et volume
+    variables:
+      # Adapte la detection de presence selon tes capteurs volumetriques.
+      # Ici : presence dans une zone specifique → enceinte 1, sinon enceinte 2.
+      presence_zone_1: >-
+        {{ is_state('binary_sensor.YOUR_MOTION_SENSOR_1', 'on') or
+        is_state('binary_sensor.YOUR_MOTION_SENSOR_2', 'on') }}
+      final_target: >-
+        {% set s = target_speakers %}
+        {% if s is defined and s != none and s | count > 0 %}
+          {% if s | count > 1 %}media_player.YOUR_SPEAKER_GROUP
+          {% else %}{{ s[0] }}{% endif %}
+        {% else %}
+          {% if presence_zone_1 %}media_player.YOUR_SPEAKER_1
+          {% else %}media_player.YOUR_SPEAKER_2{% endif %}
+        {% endif %}
+
+  - alias: Snapshot media
+    action: scene.create
+    data:
+      scene_id: snapshot_annonce_multi_enceintes
+      snapshot_entities:
+        - media_player.YOUR_SPEAKER_1
+        - media_player.YOUR_SPEAKER_2
+
+  - alias: Application volume
+    if:
+      - condition: template
+        value_template: "{{ states(final_target) != 'unavailable' }}"
+    then:
+      - action: media_player.volume_set
+        target:
+          entity_id: "{{ final_target }}"
+        data:
+          volume_level: "{{ target_volume }}"
+      - delay:
+          milliseconds: 500
+
+  - alias: Execution TTS
+    action: tts.speak
+    target:
+      entity_id: "{{ engine }}"
+    data:
+      cache: true
+      media_player_entity_id: "{{ final_target }}"
+      message: "{{ message }}"
+      language: "{{ tts_language }}"
+      options: "{{ tts_options }}"
+    continue_on_error: true
+
+  - alias: Attente dynamique
+    # Formule : longueur du message / 12 caracteres par seconde + 3s de marge,
+    # avec un minimum de 3 secondes.
+    delay: "{{ [((message | length / 12) + 3) | round(0, 'ceil') | int, 3] | max }}"
+
+  - alias: Restauration
+    action: scene.turn_on
+    target:
+      entity_id: scene.snapshot_annonce_multi_enceintes
+
+mode: single

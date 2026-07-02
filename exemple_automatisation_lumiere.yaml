@@ -1,0 +1,81 @@
+alias: Notification lumière allumée
+description: >-
+  Envoie une annonce vocale si une lumière reste allumée en précisant
+  le nom de la lampe, sa pièce et la durée.
+  Remplace les entités light.YOUR_LIGHT_ENTITY_* par tes propres entités.
+triggers:
+  - trigger: state
+    id: "5"
+    alias: Délai 5 minutes
+    entity_id:
+      - light.YOUR_LIGHT_ENTITY_1
+    from: "off"
+    to: "on"
+    for:
+      hours: 0
+      minutes: 5
+      seconds: 0
+  - trigger: state
+    id: "10"
+    alias: Délai 10 minutes
+    entity_id:
+      - light.YOUR_LIGHT_ENTITY_2
+      - light.YOUR_LIGHT_ENTITY_3
+    from: "off"
+    to: "on"
+    for:
+      hours: 0
+      minutes: 10
+      seconds: 0
+  - trigger: state
+    id: "30"
+    alias: Délai 30 minutes
+    entity_id:
+      - light.YOUR_LIGHT_ENTITY_4
+    from: "off"
+    to: "on"
+    for:
+      hours: 0
+      minutes: 30
+      seconds: 0
+conditions: []
+actions:
+  - alias: Calcul des variables communes
+    variables:
+      light_name: "{{ trigger.to_state.attributes.friendly_name }}"
+      light_area: "{{ area_name(trigger.entity_id) or 'pièce inconnue' }}"
+      light_duration: "{{ trigger.id }}"
+
+  - alias: Traitement specifique Z-Wave (optionnel)
+    # Supprime ce bloc si tu n'utilises pas Z-Wave JS.
+    choose:
+      - conditions:
+          - alias: L'entité est Z-Wave
+            condition: template
+            value_template: >-
+              {{ integration_entities('zwave_js') | select('eq',
+              trigger.entity_id) | list | count > 0 }}
+        sequence:
+          - alias: Rafraîchissement forcé
+            action: zwave_js.refresh_value
+            data:
+              entity_id: "{{ trigger.entity_id }}"
+          - alias: Pause technique
+            delay:
+              seconds: 2
+
+  - alias: Interruption si éteint après rafraîchissement
+    condition: template
+    value_template: "{{ is_state(trigger.entity_id, 'on') }}"
+
+  - alias: Annonce Vocale
+    action: script.annonce_vocale
+    data:
+      key: lumiere_allumee
+      vars:
+        nom: "{{ light_name }}"
+        piece: "{{ light_area }}"
+        duree: "{{ light_duration }}"
+
+mode: parallel
+max: 10

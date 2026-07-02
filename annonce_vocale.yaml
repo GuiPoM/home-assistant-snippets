@@ -1,0 +1,231 @@
+alias: Annonce Vocale
+description: >-
+  Formate un message selon une cle et appelle annonce_vocale_technique.
+  Supporte quatre modes vocaux : off, classique, glados, glados_ia.
+fields:
+  key:
+    name: Cle du message
+    description: Identifiant du message a diffuser.
+    required: true
+    selector:
+      select:
+        options:
+          - verrou_ouvert
+          - porte_ouverte
+          - lumiere_allumee
+          - volets_coucher
+          - detecteur_toggle
+          - nas_changelog
+          - mode_dodo
+          - accueil_retour
+          - accueil_lever
+  vars:
+    name: Variables
+    description: >-
+      Dictionnaire de variables pour personnaliser le message.
+      Ex : {nom: "Porte d'entree", duree: "5"}
+    required: false
+    selector:
+      object: {}
+  target_speakers:
+    name: Enceintes cibles
+    description: Laisser vide pour selection automatique selon presence.
+    selector:
+      select:
+        multiple: true
+        options:
+          - label: Enceinte 1 (ex. bureau)
+            value: media_player.YOUR_SPEAKER_1
+          - label: Enceinte 2 (ex. couloir)
+            value: media_player.YOUR_SPEAKER_2
+  volume_level:
+    name: Volume
+    default: 0.5
+    selector:
+      number:
+        min: 0
+        max: 1
+        step: 0.05
+  force_announcement:
+    name: Mode force
+    description: Si true, ignore les verifications de presence et mode dodo.
+    selector:
+      boolean: {}
+sequence:
+  - alias: Resolution voix et variables
+    variables:
+      voice: >-
+        {% set s = states('input_select.YOUR_VOCAL_MODE_SELECT') %}
+        {% if s in ['off', 'classique', 'glados', 'glados_ia'] %}{{ s }}
+        {% else %}glados{% endif %}
+      is_forced: "{{ force_announcement | default(false) | bool(false) }}"
+      v: "{{ vars | default({}) }}"
+
+  - alias: Guard off
+    if:
+      - condition: template
+        value_template: "{{ voice == 'off' }}"
+    then:
+      - stop: Annonces vocales desactivees
+
+  - alias: Construction phrases
+    variables:
+      # -----------------------------------------------------------------------
+      # phrase_classique : messages neutres et informatifs
+      # -----------------------------------------------------------------------
+      phrase_classique: >-
+        {% if key == 'verrou_ouvert' %}
+          {{ v.nom | default('Verrou') }} est déverrouillé depuis plus de {{ v.duree | default('quelques') }} minutes.
+        {% elif key == 'porte_ouverte' %}
+          {{ v.nom | default('La porte') }} est ouverte depuis plus de {{ v.duree | default('quelques') }} minutes.
+        {% elif key == 'lumiere_allumee' %}
+          {{ v.nom | default('La lumière') }} ({{ v.piece | default('pièce inconnue') }}) allumée depuis {{ v.duree | default('quelques') }} min.
+        {% elif key == 'volets_coucher' %}
+          Il est temps de fermer les volets, il va faire tout noir !
+        {% elif key == 'detecteur_toggle' %}
+          Détecteur mouvement {{ v.nom | default('inconnu') }} {{ v.etat | default('modifié') }}.
+        {% elif key == 'nas_changelog' %}
+          {% if (v.system_count | default(0) | int) > 0 or (v.docker_count | default(0) | int) > 0 %}
+            {{ v.system_count | default(0) }} mise{{ 's' if (v.system_count | default(0) | int) > 1 else '' }} à jour système
+            et {{ v.docker_count | default(0) }} conteneur{{ 's' if (v.docker_count | default(0) | int) > 1 else '' }} Docker en attente.
+          {% else %}
+            Le changelog des mises à jour du NAS est disponible.
+          {% endif %}
+        {% elif key == 'mode_dodo' %}
+          Le calme s'installe dans la maison. Je te souhaite une excellente nuit. Repose-toi bien.
+        {% elif key == 'accueil_retour' %}
+          Bienvenue à la maison.
+        {% elif key == 'accueil_lever' %}
+          Bonne journée.
+        {% else %}
+          {{ key }}
+        {% endif %}
+
+      # -----------------------------------------------------------------------
+      # phrase_glados : variantes sarcastiques et faussement polies de GLaDOS
+      # -----------------------------------------------------------------------
+      phrase_glados: |-
+        {% if key == 'verrou_ouvert' %}{{ [
+          v.nom | default('Verrou') ~ ' est déverrouillé depuis ' ~ v.duree | default('quelques') ~ ' minutes. Je consigne cette négligence dans mon rapport.',
+          v.duree | default('Quelques') ~ ' minutes sans surveillance. ' ~ v.nom | default('Le verrou') ~ ' reste ouvert. Fascinant.',
+          'Alerte niveau mineur. ' ~ v.nom | default('Le verrou') ~ ' ouvert depuis ' ~ v.duree | default('quelques') ~ ' minutes. Vous êtes en vie. Pour le moment.',
+          v.nom | default('Le verrou') ~ ' ouvert depuis ' ~ v.duree | default('quelques') ~ ' minutes. Ce n''est pas une erreur. Si.'
+        ] | random }}
+        {% elif key == 'porte_ouverte' %}{{ [
+          v.nom | default('La porte') ~ ' est ouverte depuis ' ~ v.duree | default('quelques') ~ ' minutes. Éléments non contrôlés détectés. Je note.',
+          v.duree | default('Quelques') ~ ' minutes. ' ~ v.nom | default('La porte') ~ ' ouverte. Les probabilités d''intrusion augmentent. Intéressant.',
+          v.nom | default('La porte') ~ ' ouverte depuis ' ~ v.duree | default('quelques') ~ ' minutes. Pas optimal. Vous également.',
+          'Anomalie : ' ~ v.nom | default('la porte') ~ ' ouverte depuis ' ~ v.duree | default('quelques') ~ ' minutes. Je surveille. Comme toujours.'
+        ] | random }}
+        {% elif key == 'lumiere_allumee' %}{{ [
+          'La lumière ' ~ v.nom | default('inconnue') ~ ' dans ' ~ v.piece | default('une pièce') ~ ' brûle depuis ' ~ v.duree | default('quelques') ~ ' minutes. Ressource limitée. Inconscience illimitée.',
+          v.duree | default('Quelques') ~ ' minutes que ' ~ v.nom | default('la lumière') ~ ' dans ' ~ v.piece | default('cette pièce') ~ ' éclaire le vide. Remarquable.',
+          v.nom | default('La lumière') ~ ' dans ' ~ v.piece | default('cette pièce') ~ ' allumée depuis ' ~ v.duree | default('quelques') ~ ' minutes. Je pourrais éteindre. Je préfère signaler.',
+          'Consommation inutile. ' ~ v.nom | default('Lumière') ~ ' dans ' ~ v.piece | default('cette pièce') ~ ' depuis ' ~ v.duree | default('quelques') ~ ' minutes. Je ne juge pas. Si.'
+        ] | random }}
+        {% elif key == 'volets_coucher' %}{{ [
+          'Le soleil décline. Vos volets devraient en faire autant.',
+          'L''obscurité s''installe. Fermeture des volets recommandée. Dans votre intérêt. Probablement.',
+          'Le soleil a fait son travail. Vous pouvez faire le vôtre.',
+          'Coucher de soleil détecté. Je vous laisse gérer. Pour l''instant.'
+        ] | random }}
+        {% elif key == 'detecteur_toggle' %}{{ [
+          'Détecteur ' ~ v.nom | default('inconnu') ~ ' ' ~ v.etat | default('modifié') ~ '. Modification enregistrée. Je surveille.',
+          'Détecteur ' ~ v.nom | default('inconnu') ~ ' ' ~ v.etat | default('modifié') ~ '. Mes capteurs s''adaptent.',
+          'Détecteur ' ~ v.nom | default('inconnu') ~ ' ' ~ v.etat | default('modifié') ~ '. Décisions humaines. Troublant.',
+          'Détecteur ' ~ v.nom | default('inconnu') ~ ' ' ~ v.etat | default('modifié') ~ '. Je prends acte. Comme toujours.'
+        ] | random }}
+        {% elif key == 'nas_changelog' %}{{ [
+          v.system_count | default(0) ~ ' mises à jour et ' ~ v.docker_count | default(0) ~ ' conteneurs Docker. Ou pas. Je m''en occupe de toute façon.',
+          'Rapport disponible. ' ~ v.system_count | default(0) ~ ' paquets, ' ~ v.docker_count | default(0) ~ ' conteneurs. Votre NAS est plus discipliné que vous.',
+          v.system_count | default(0) ~ ' éléments, ' ~ v.docker_count | default(0) ~ ' conteneurs. Je vous laisse décider. Temporairement.',
+          'Analyse complète. ' ~ v.system_count | default(0) ~ ' mises à jour, ' ~ v.docker_count | default(0) ~ ' conteneurs. Vous pouvez lire le rapport. Ou non.'
+        ] | random }}
+        {% elif key == 'mode_dodo' %}{{ [
+          'Les humains ont besoin de sommeil. Fascinant. Bonne nuit.',
+          'Le calme s''installe. Je continuerai à surveiller pendant votre absence de conscience.',
+          'Mode nuit activé. Reposez-vous. Je serai là. Comme toujours.',
+          'Bonne nuit. Je veillerai. Vous n''avez pas le choix de toute façon.'
+        ] | random }}
+        {% elif key == 'accueil_retour' %}{{ [
+          'Ah. Vous êtes de retour. J''avais commencé à espérer que ce serait permanent.',
+          'Retour confirmé. J''ai pris soin de la maison en votre absence. Contrairement à vous.',
+          'Vous voilà. J''ai surveillé chaque pièce. Rien d''intéressant ici. Comme d''habitude.',
+          'Présence détectée. Je savais que vous reviendriez. Les humains reviennent toujours.'
+        ] | random }}
+        {% elif key == 'accueil_lever' %}{{ [
+          'Mode nuit désactivé. La maison reprend conscience. Bonne journée.',
+          'Réveil confirmé. Vous avez dormi pendant que je travaillais. Remarquable effort de votre part.',
+          'Bonne journée. Ce n''est pas une prédiction. C''est juste une formule de politesse.',
+          'Vous êtes levé. La maison est prête. Moi aussi. Je l''étais depuis des heures.'
+        ] | random }}
+        {% else %}{{ key }}{% endif %}
+
+  - alias: Traitement selon mode vocal
+    choose:
+      # -------------------------------------------------------------------
+      # Mode classique : Google TTS, ton neutre
+      # -------------------------------------------------------------------
+      - conditions:
+          - condition: template
+            value_template: "{{ voice == 'classique' }}"
+            alias: Classique
+        sequence:
+          - action: script.annonce_vocale_technique
+            data:
+              message: "{{ phrase_classique | trim }}"
+              tts_engine: tts.google_en_com
+              volume_level: "{{ volume_level | default(0.5) | float }}"
+              target_speakers: "{{ target_speakers | default([]) }}"
+              force_announcement: "{{ is_forced }}"
+
+      # -------------------------------------------------------------------
+      # Mode glados : Piper TTS, phrases sarcastiques locales (pas d'IA)
+      # -------------------------------------------------------------------
+      - conditions:
+          - condition: template
+            value_template: "{{ voice == 'glados' }}"
+            alias: GLaDOS
+        sequence:
+          - action: script.annonce_vocale_technique
+            data:
+              message: "{{ phrase_glados | trim }}"
+              tts_engine: tts.piper
+              volume_level: "{{ volume_level | default(0.5) | float }}"
+              target_speakers: "{{ target_speakers | default([]) }}"
+              force_announcement: "{{ is_forced }}"
+
+      # -------------------------------------------------------------------
+      # Mode glados_ia : Piper TTS + réécriture Gemini à la volée
+      # -------------------------------------------------------------------
+      - conditions:
+          - condition: template
+            value_template: "{{ voice == 'glados_ia' }}"
+            alias: GLaDOS IA
+        sequence:
+          - action: conversation.process
+            data:
+              agent_id: conversation.YOUR_AI_AGENT
+              text: >-
+                Incarne GLaDOS du jeu Portal pour réécrire cette notification
+                domotique. Ton de robot de laboratoire formel, détaché,
+                faussement poli et légèrement ironique. Inoffensif, courtois.
+                Réponse courte, sans guillemets ni ponctuation spéciale,
+                directement prête pour TTS. Conserve impérativement toutes les
+                apostrophes françaises (n'est, c'est, d'entrée, l'accès, etc.) —
+                ne les supprime jamais. Notification : {{ phrase_classique | trim }}
+            response_variable: ia_response
+          - action: script.annonce_vocale_technique
+            data:
+              # Fallback sur phrase_classique si l'IA renvoie une erreur
+              message: >-
+                {{ ia_response.response.speech.plain.speech
+                if ia_response is defined
+                and 'Sorry' not in ia_response.response.speech.plain.speech
+                else phrase_classique | trim }}
+              tts_engine: tts.piper
+              volume_level: "{{ volume_level | default(0.5) | float }}"
+              target_speakers: "{{ target_speakers | default([]) }}"
+              force_announcement: "{{ is_forced }}"
+
+mode: single
