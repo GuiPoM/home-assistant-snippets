@@ -40,6 +40,21 @@
 
 **Fichiers fournis :** 2 scripts
 
+### 🤖 GLaDOS dans Home Assistant — Annonces vocales sarcastiques
+**Et si votre maison connectée arrêtait d'être polie et monotone pour devenir... sarcastique et faussement polie ?**
+
+[![Watch on YouTube](https://img.shields.io/badge/YouTube-FF0000?style=flat&logo=youtube&logoColor=white)](https://youtu.be/qeDvR1QU5XM)
+[![Code on GitHub](https://img.shields.io/badge/Code-video/glados--annonces--vocales-blue)](https://github.com/GuiPoM/home-assistant-snippets/tree/video/glados-annonces-vocales)
+
+**Ce que vous apprendrez :**
+- ✅ Installer la voix Piper GLaDOS VF en local
+- ✅ Configurer un agent de conversation Gemini pour réécrire les notifications à la volée
+- ✅ Concevoir une architecture en deux scripts (technique + intelligence)
+- ✅ Gérer la diffusion multi-enceintes et la sélection par présence
+- ✅ Suspendre les annonces selon la présence et le mode nuit
+
+**Fichiers fournis :** 2 scripts + 1 exemple d'automatisation
+
 ---
 
 ## 🚀 Démarrage Rapide
@@ -66,7 +81,8 @@ cat README.md
 ├── 📄 AGENT.md                     # Directives d'audit
 └── 🎬 Branches vidéo (video/*)
     ├── video/ikea-klippbok/        # Code complet + documentation
-    └── video/notifications-smartphone/  # Code complet + documentation
+    ├── video/notifications-smartphone/  # Code complet + documentation
+    └── video/glados-annonces-vocales/   # Code complet + documentation
 ```
 
 **Chaque branche vidéo est indépendante** - Vous pouvez clone une branche spécifique sans les autres.
@@ -162,4 +178,4 @@ D'autres tutoriels vidéo seront ajoutés régulièrement. Restez à l'écoute!
 
 ---
 
-**Dernière mise à jour :** Avril 2026 | **Créé avec ❤️ pour la communauté Home Assistant**
+**Dernière mise à jour :** Juillet 2026 | **Créé avec ❤️ pour la communauté Home Assistant**
