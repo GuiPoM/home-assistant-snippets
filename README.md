@@ -118,7 +118,7 @@ Testez chaque composant et adaptez-le à vos besoins spécifiques.
 | Ressource | Lien |
 |-----------|------|
 | 🏠 Home Assistant | https://www.home-assistant.io/ |
-| 📱 Mon Hub | https://lhub.to/GuiPoM |
+| 📱 Mon Hub | https://www.gteste.fr/links |
 | 🔐 Alarmo (HACS) | https://github.com/nielsfaber/alarmo |
 | 🧵 Thread | https://www.home-assistant.io/integrations/thread/ |
 | 🔄 Matter | https://www.home-assistant.io/integrations/matter/ |
