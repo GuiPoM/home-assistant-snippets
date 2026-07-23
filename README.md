@@ -10,6 +10,21 @@
 
 ## 📺 Tutoriels Vidéo
 
+### 💡 Éclairage Zigbee fiable — Binding, Scènes et Détection de mouvement
+**Rendre son éclairage Zigbee FIABLE même si Home Assistant tombe en panne !**
+
+[![Watch on YouTube](https://img.shields.io/badge/YouTube-FF0000?style=flat&logo=youtube&logoColor=white)](https://youtu.be/t9jAJRpR4i8)
+[![Code on GitHub](https://img.shields.io/badge/Code-video/eclairage--zigbee--binding-blue)](https://github.com/GuiPoM/home-assistant-snippets/tree/video/eclairage-zigbee-binding)
+
+**Ce que vous apprendrez :**
+- ✅ Configurer le binding Zigbee dans Zigbee2MQTT (liaison directe sans contrôleur)
+- ✅ Cycler entre plusieurs scènes via appuis multiples sur un interrupteur
+- ✅ Automatiser l'allumage/extinction sur détection de mouvement et luminosité
+- ✅ Gérer les modes jour/nuit, l'extinction progressive et le débrayage manuel
+- ✅ Prévoir des solutions de repli (failsafe) pour votre installation
+
+**Fichiers fournis :** 2 blueprints
+
 ### 🌊 IKEA Klippbok + Home Assistant
 **Sécurisez votre logement contre les inondations !**
 
@@ -80,12 +95,13 @@ cat README.md
 ├── 📄 CLAUDE.md                    # Instructions de travail
 ├── 📄 AGENT.md                     # Directives d'audit
 └── 🎬 Branches vidéo (video/*)
-    ├── video/ikea-klippbok/        # Code complet + documentation
-    ├── video/notifications-smartphone/  # Code complet + documentation
-    └── video/glados-annonces-vocales/   # Code complet + documentation
+    ├── video/eclairage-zigbee-binding/      # Code complet + documentation
+    ├── video/ikea-klippbok/                 # Code complet + documentation
+    ├── video/notifications-smartphone/     # Code complet + documentation
+    └── video/glados-annonces-vocales/       # Code complet + documentation
 ```
 
-**Chaque branche vidéo est indépendante** - Vous pouvez clone une branche spécifique sans les autres.
+**Chaque branche vidéo est indépendante** - Vous pouvez cloner une branche spécifique sans les autres.
 
 ---
 
