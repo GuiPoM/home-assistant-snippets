@@ -1,0 +1,278 @@
+blueprint:
+  name: "Détecteur mouvement - Extinction automatique"
+  description: "Allume une lumière sur détection de mouvement si éteinte et sombre. Supporte des scènes jour/nuit via un input_boolean. Extinction progressive comme avertissement. Prise en main manuelle via dimmer interrompt l'automation."
+  domain: automation
+  input:
+    motion_sensor:
+      name: "Capteur de mouvement"
+      selector:
+        entity:
+          domain: binary_sensor
+          device_class: motion
+    light_target:
+      name: "Lumière"
+      selector:
+        entity:
+          domain: light
+    dimmer_action_sensor:
+      name: "Capteur action du dimmer"
+      description: "Entité sensor émettant les actions du dimmer (ex: sensor.cuisine_dimmer_action)."
+      selector:
+        entity:
+          domain: sensor
+    lux_sensor:
+      name: "Capteur d'éclairement"
+      selector:
+        entity:
+          domain: sensor
+          device_class: illuminance
+    lux_threshold:
+      name: "Seuil d'éclairement (lux)"
+      description: "En dessous de ce seuil, le détecteur peut allumer la lumière."
+      default: 15
+      selector:
+        number:
+          min: 0
+          max: 500
+          unit_of_measurement: lx
+    night_boolean:
+      name: "Input boolean mode nuit"
+      description: "Boolean indiquant si on est en mode nuit."
+      selector:
+        entity:
+          domain: input_boolean
+    scene_day:
+      name: "Scène jour (optionnel)"
+      description: "Scène à activer le jour. Laisser vide pour un simple turn_on."
+      default: {}
+      selector:
+        entity:
+          domain: scene
+    scene_night:
+      name: "Scène nuit (optionnel)"
+      description: "Scène à activer la nuit. Laisser vide pour un simple turn_on."
+      default: {}
+      selector:
+        entity:
+          domain: scene
+    inhibition_delay:
+      name: "Inhibition après extinction manuelle (secondes)"
+      description: "Durée pendant laquelle le détecteur est inactif après un off_press."
+      default: 15
+      selector:
+        number:
+          min: 0
+          max: 300
+          unit_of_measurement: s
+    silence_delay:
+      name: "Délai silencieux avant extinction (secondes)"
+      description: "Durée sans mouvement avant de lancer l'extinction."
+      default: 30
+      selector:
+        number:
+          min: 5
+          max: 600
+          unit_of_measurement: s
+    extinction_transition:
+      name: "Durée de l'extinction progressive (secondes)"
+      description: "L'extinction progressive sert d'avertissement visuel."
+      default: 15
+      selector:
+        number:
+          min: 1
+          max: 60
+          unit_of_measurement: s
+    warning_effect:
+      name: "Effet d'avertissement"
+      description: "Effet Zigbee déclenché avant l'extinction progressive (ex: breathe, candle, sparkle, glisten, underwater, cosmos, sunbeam, enchant). Laisser vide pour extinction progressive directe sans effet."
+      default: ""
+      selector:
+        text: {}
+
+mode: restart
+
+triggers:
+  - alias: "Mouvement détecté"
+    trigger: state
+    entity_id: !input motion_sensor
+    to: "on"
+
+variables:
+  inhibition_delay: !input inhibition_delay
+  silence_delay: !input silence_delay
+  extinction_transition: !input extinction_transition
+  warning_effect: !input warning_effect
+  dimmer: !input dimmer_action_sensor
+  light: !input light_target
+  night_boolean: !input night_boolean
+  scene_day: !input scene_day
+  scene_night: !input scene_night
+  this_automation: "{{ this.entity_id }}"
+
+conditions:
+  - alias: "Sombre"
+    condition: numeric_state
+    entity_id: !input lux_sensor
+    below: !input lux_threshold
+  - alias: "Automation en cours (restart) ou lumière éteinte"
+    condition: template
+    value_template: >-
+      {{ is_state(this_automation, 'on') or is_state(light, 'off') }}
+  - alias: "Pas d'extinction manuelle récente"
+    condition: template
+    value_template: >-
+      {{ is_state(light, 'on') or
+         (now() - states[light].last_changed).total_seconds() > inhibition_delay }}
+
+actions:
+  - alias: "Allumer uniquement si lumière éteinte"
+    if:
+      - condition: state
+        entity_id: !input light_target
+        state: "off"
+    then:
+      - alias: "Allumer selon mode jour/nuit"
+        choose:
+          - alias: "Mode nuit avec scène nuit"
+            conditions:
+              - condition: state
+                entity_id: !input night_boolean
+                state: "on"
+              - condition: template
+                value_template: "{{ scene_night is defined and scene_night != {} and scene_night != '' }}"
+            sequence:
+              - action: scene.turn_on
+                target:
+                  entity_id: "{{ scene_night }}"
+          - alias: "Mode jour avec scène jour"
+            conditions:
+              - condition: state
+                entity_id: !input night_boolean
+                state: "off"
+              - condition: template
+                value_template: "{{ scene_day is defined and scene_day != {} and scene_day != '' }}"
+            sequence:
+              - action: scene.turn_on
+                target:
+                  entity_id: "{{ scene_day }}"
+        default:
+          - alias: "Allumage simple"
+            action: light.turn_on
+            target:
+              entity_id: !input light_target
+
+  - alias: "Attente fin de mouvement ou prise en main"
+    wait_for_trigger:
+      - alias: "Fin de mouvement"
+        trigger: state
+        entity_id: !input motion_sensor
+        to: "off"
+      - alias: "Extinction manuelle"
+        trigger: state
+        entity_id: !input dimmer_action_sensor
+        to: "off_press"
+      - alias: "Allumage manuel"
+        trigger: state
+        entity_id: !input dimmer_action_sensor
+        to: "on_press"
+      - alias: "Extinction par HA"
+        trigger: state
+        entity_id: !input light_target
+        to: "off"
+
+  - alias: "Stop si prise en main"
+    if:
+      - alias: "Interrupteur actionné ou lumière éteinte par HA"
+        condition: template
+        value_template: >-
+          {{ wait.trigger is not none and (
+             (wait.trigger.entity_id == dimmer and wait.trigger.to_state.state in ['on_press', 'off_press'])
+             or
+             (wait.trigger.entity_id == light and wait.trigger.to_state.state == 'off')
+          ) }}
+    then:
+      - stop: "Prise en main détectée"
+
+  - alias: "Timeout silencieux - attente avant extinction"
+    wait_for_trigger:
+      - alias: "Mouvement repris"
+        trigger: state
+        entity_id: !input motion_sensor
+        to: "on"
+      - alias: "Extinction manuelle"
+        trigger: state
+        entity_id: !input dimmer_action_sensor
+        to: "off_press"
+      - alias: "Allumage manuel"
+        trigger: state
+        entity_id: !input dimmer_action_sensor
+        to: "on_press"
+      - alias: "Extinction par HA"
+        trigger: state
+        entity_id: !input light_target
+        to: "off"
+    timeout:
+      seconds: "{{ silence_delay }}"
+    continue_on_timeout: true
+
+  - alias: "Stop si prise en main pendant timeout"
+    if:
+      - alias: "Interrupteur actionné ou lumière éteinte par HA"
+        condition: template
+        value_template: >-
+          {{ wait.trigger is not none and (
+             (wait.trigger.entity_id == dimmer and wait.trigger.to_state.state in ['on_press', 'off_press'])
+             or
+             (wait.trigger.entity_id == light and wait.trigger.to_state.state == 'off')
+          ) }}
+    then:
+      - stop: "Prise en main détectée"
+
+  - alias: "Effet d'avertissement si configuré"
+    if:
+      - alias: "Effet renseigné"
+        condition: template
+        value_template: "{{ warning_effect | trim != '' }}"
+    then:
+      - alias: "Lancer l'effet"
+        action: light.turn_on
+        target:
+          entity_id: !input light_target
+        data:
+          effect: "{{ warning_effect }}"
+      - alias: "Attente pendant extinction_transition ou prise en main"
+        wait_for_trigger:
+          - alias: "Extinction manuelle"
+            trigger: state
+            entity_id: !input dimmer_action_sensor
+            to: "off_press"
+          - alias: "Allumage manuel"
+            trigger: state
+            entity_id: !input dimmer_action_sensor
+            to: "on_press"
+          - alias: "Extinction par HA"
+            trigger: state
+            entity_id: !input light_target
+            to: "off"
+        timeout:
+          seconds: "{{ extinction_transition }}"
+        continue_on_timeout: true
+      - alias: "Stop si prise en main pendant effet"
+        if:
+          - alias: "Interrupteur actionné ou lumière éteinte par HA"
+            condition: template
+            value_template: >-
+              {{ wait.trigger is not none and (
+                 (wait.trigger.entity_id == dimmer and wait.trigger.to_state.state in ['on_press', 'off_press'])
+                 or
+                 (wait.trigger.entity_id == light and wait.trigger.to_state.state == 'off')
+              ) }}
+        then:
+          - stop: "Prise en main détectée"
+
+  - alias: "Extinction progressive"
+    action: light.turn_off
+    target:
+      entity_id: !input light_target
+    data:
+      transition: "{{ extinction_transition }}"
