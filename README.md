@@ -1,181 +1,99 @@
-# 🏠 Home Assistant Snippets
+# Éclairage Zigbee fiable — Binding, Scènes et Détection de mouvement
 
-[![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
-[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2024.1%2B-blue)](https://www.home-assistant.io/)
-[![Python](https://img.shields.io/badge/Python-3.11%2B-blue)](https://python.org)
+> Vidéo associée : [Rendre son éclairage Zigbee FIABLE 💡 Binding Zigbee, Scènes et Mouvements dans Home Assistant !](https://youtu.be/t9jAJRpR4i8)
+> Branche : `video/eclairage-zigbee-binding`
 
-> 🎬 Une collection de **blueprints Home Assistant** et **scripts Jinja** conçus pour accompagner mes tutoriels YouTube. Code simplifié, prêt à être adapté à votre installation personnelle.
-
----
-
-## 📺 Tutoriels Vidéo
-
-### 🌊 IKEA Klippbok + Home Assistant
-**Sécurisez votre logement contre les inondations !**
-
-[![Watch on YouTube](https://img.shields.io/badge/YouTube-FF0000?style=flat&logo=youtube&logoColor=white)](https://youtu.be/vnOwSnuNEPI)
-[![Code on GitHub](https://img.shields.io/badge/Code-video/ikea--klippbok-blue)](https://github.com/GuiPoM/home-assistant-snippets/tree/video/ikea-klippbok)
-
-**Ce que vous apprendrez :**
-- ✅ Intégrer le détecteur IKEA Klippbok via Matter/Thread
-- ✅ Construire une logique d'automatisation complète
-- ✅ Gérer les sirènes et alertes intelligentes
-- ✅ Créer des scripts d'alerte personnalisés
-- ✅ Monitorer votre sécurité domotique
-
-**Fichiers fournis :** 3 blueprints + 3 scripts + macros Jinja
-
-### 📱 Notifications Smartphone + Home Assistant
-**Un script central pour toutes vos notifications — push, mail, SMS, Do Not Disturb !**
-
-[![Watch on YouTube](https://img.shields.io/badge/YouTube-FF0000?style=flat&logo=youtube&logoColor=white)](https://youtu.be/zj1U9-bSfXE)
-[![Code on GitHub](https://img.shields.io/badge/Code-video/notifications--smartphone-blue)](https://github.com/GuiPoM/home-assistant-snippets/tree/video/notifications-smartphone)
-
-**Ce que vous apprendrez :**
-- ✅ Centraliser toutes vos notifications dans un seul script
-- ✅ Gérer 5 niveaux de sévérité (du push discret au SMS d'urgence)
-- ✅ Bypasser le mode Ne Pas Déranger Android avec `alarm_stream`
-- ✅ Ajouter des boutons d'action interactifs dans vos notifications
-- ✅ Piloter le DND de votre téléphone depuis Home Assistant
-
-**Fichiers fournis :** 2 scripts
-
-### 🤖 GLaDOS dans Home Assistant — Annonces vocales sarcastiques
-**Et si votre maison connectée arrêtait d'être polie et monotone pour devenir... sarcastique et faussement polie ?**
-
-[![Watch on YouTube](https://img.shields.io/badge/YouTube-FF0000?style=flat&logo=youtube&logoColor=white)](https://youtu.be/qeDvR1QU5XM)
-[![Code on GitHub](https://img.shields.io/badge/Code-video/glados--annonces--vocales-blue)](https://github.com/GuiPoM/home-assistant-snippets/tree/video/glados-annonces-vocales)
-
-**Ce que vous apprendrez :**
-- ✅ Installer la voix Piper GLaDOS VF en local
-- ✅ Configurer un agent de conversation Gemini pour réécrire les notifications à la volée
-- ✅ Concevoir une architecture en deux scripts (technique + intelligence)
-- ✅ Gérer la diffusion multi-enceintes et la sélection par présence
-- ✅ Suspendre les annonces selon la présence et le mode nuit
-
-**Fichiers fournis :** 2 scripts + 1 exemple d'automatisation
+Deux blueprints Home Assistant présentés dans la vidéo pour rendre son éclairage Zigbee à la fois fiable et intelligent.
 
 ---
 
-## 🚀 Démarrage Rapide
+## Fichiers fournis
 
-### Pour un tutoriel spécifique
-
-```bash
-# Clonez la branche vidéo
-git clone --branch video/notifications-smartphone https://github.com/GuiPoM/home-assistant-snippets.git
-cd home-assistant-snippets
-
-# Consultez le README pour les instructions
-cat README.md
-```
-
-### Structure du Repository
-
-```
-📦 home-assistant-snippets
-├── 📄 README.md                    # Cette page
-├── 📄 CONTRIBUTING.md              # Politique d'utilisation
-├── 📄 LICENSE                      # MIT License
-├── 📄 CLAUDE.md                    # Instructions de travail
-├── 📄 AGENT.md                     # Directives d'audit
-└── 🎬 Branches vidéo (video/*)
-    ├── video/ikea-klippbok/        # Code complet + documentation
-    ├── video/notifications-smartphone/  # Code complet + documentation
-    └── video/glados-annonces-vocales/   # Code complet + documentation
-```
-
-**Chaque branche vidéo est indépendante** - Vous pouvez clone une branche spécifique sans les autres.
+| Fichier | Description |
+|---|---|
+| `blueprint_scene_cycler.yaml` | Cycle entre plusieurs scènes sur appuis multiples (2e appui = scène 1, 3e appui = scène 2...) |
+| `blueprint_auto_extinction.yaml` | Allumage automatique sur mouvement + luminosité, extinction progressive, modes jour/nuit, override manuel |
 
 ---
 
-## 💡 Comment Ça Marche
+## Prérequis
 
-### 1️⃣ Choisissez un Tutoriel
-Parcourez la liste des tutoriels ci-dessus et sélectionnez celui qui vous intéresse.
-
-### 2️⃣ Consultez la Branche Vidéo
-Chaque tutoriel a sa propre branche avec tout le code source et la documentation.
-
-### 3️⃣ Adaptez à Votre Installation
-Suivez le README de la branche pour adapter le code à votre configuration Home Assistant.
-
-### 4️⃣ Testez et Déployez
-Testez chaque composant et adaptez-le à vos besoins spécifiques.
+- **Home Assistant** 2024.1 ou supérieur
+- **Zigbee2MQTT** avec le binding Zigbee configuré sur vos interrupteurs (voir vidéo)
+- Un capteur de mouvement (`binary_sensor` de classe `motion`)
+- Un capteur de luminosité (`sensor` de classe `illuminance`)
+- Un `input_boolean` pour le mode nuit (ex: votre mode dodo)
 
 ---
 
-## 📋 Configuration Requise
+## Blueprint 1 : Appuis multiples en boucle (Scènes)
 
-- **Home Assistant** 2024.1 ou plus récent
-- **Python** 3.11 ou plus récent
-- Les dépendances spécifiques à chaque tutoriel (voir README de la branche)
+**Fichier :** `blueprint_scene_cycler.yaml`
 
----
+Ce blueprint fonctionne en complément du binding Zigbee :
+- **1 appui** : allumage classique, géré directement par le binding Zigbee (sans Home Assistant)
+- **2 appuis** : active la 1ère scène configurée
+- **3 appuis** : active la 2ème scène
+- **N appuis** : cycle en boucle
 
-## 🔗 Ressources Utiles
+### Installation
 
-| Ressource | Lien |
-|-----------|------|
-| 🏠 Home Assistant | https://www.home-assistant.io/ |
-| 📱 Mon Hub | https://www.gteste.fr/links |
-| 🔐 Alarmo (HACS) | https://github.com/nielsfaber/alarmo |
-| 🧵 Thread | https://www.home-assistant.io/integrations/thread/ |
-| 🔄 Matter | https://www.home-assistant.io/integrations/matter/ |
+1. Copiez `blueprint_scene_cycler.yaml` dans `config/blueprints/automation/GuiPoM/`
+2. Dans Home Assistant : **Paramètres > Automatisations > Blueprints**
+3. Créez une nouvelle automatisation depuis ce blueprint
+4. Configurez le capteur d'action de votre interrupteur et les scènes souhaitées
 
----
+### Paramètres
 
-## 📜 Licence et Utilisation
-
-### ⚠️ Important
-Ce code est fourni **à titre informatif** pour accompagner mes tutoriels YouTube.
-
-### 🚫 Ce Qui N'est PAS Autorisé
-- ❌ Redistribuer le code
-- ❌ Publier sans attribution
-- ❌ Utiliser à titre commercial
-- ❌ Soumettre des pull requests (contributions non acceptées)
-
-### ✅ Ce Qui EST Autorisé
-- ✅ Utiliser personnellement pour votre installation Home Assistant
-- ✅ Adapter et modifier pour vos besoins
-- ✅ Apprendre et comprendre le code
-- ✅ Partager des améliorations via issues (discussions seulement)
-
-### Licence
-
-Code sous **[MIT License](./LICENSE)** - Usage personnel uniquement, compatible avec Home Assistant (Apache 2.0).
-
-Pour plus de détails, consultez [CONTRIBUTING.md](./CONTRIBUTING.md).
+| Paramètre | Description |
+|---|---|
+| `button_sensor` | Entité sensor émettant les actions (ex: `sensor.dimmer_cuisine_action`) |
+| `button_state` | Valeur déclencheur (ex: `on_press`, `press`, `single`) |
+| `scenes` | Liste des scènes à cycler dans l'ordre |
 
 ---
 
-## 🎓 Documentation
+## Blueprint 2 : Extinction automatique sur mouvement
 
-- **[CLAUDE.md](./CLAUDE.md)** - Instructions de travail pour Claude (IA)
-- **[AGENT.md](./AGENT.md)** - Directives d'audit pour les agents
-- **[CONTRIBUTING.md](./CONTRIBUTING.md)** - Politique de contribution
+**Fichier :** `blueprint_auto_extinction.yaml`
+
+Automatisation complète d'allumage/extinction sur détection de mouvement et luminosité.
+
+### Comportement
+
+- S'active si la pièce est sombre (en dessous du seuil lux) et qu'un mouvement est détecté
+- Allume la scène jour ou nuit selon le mode (`input_boolean`)
+- Après la fin du mouvement, attend le délai silencieux puis éteint progressivement
+- L'extinction progressive sert d'**avertissement visuel** (+ effet Zigbee optionnel)
+- Un appui manuel sur le dimmer (`on_press` ou `off_press`) **interrompt l'automation** (mode override)
+- Mode `restart` : chaque nouveau mouvement repart d'une instance fraîche
+
+### Installation
+
+1. Copiez `blueprint_auto_extinction.yaml` dans `config/blueprints/automation/GuiPoM/`
+2. Dans Home Assistant : **Paramètres > Automatisations > Blueprints**
+3. Créez une nouvelle automatisation depuis ce blueprint
+
+### Paramètres principaux
+
+| Paramètre | Description | Défaut |
+|---|---|---|
+| `motion_sensor` | Capteur de mouvement | — |
+| `light_target` | Lumière à piloter | — |
+| `dimmer_action_sensor` | Entité action du dimmer | — |
+| `lux_sensor` | Capteur de luminosité | — |
+| `lux_threshold` | Seuil en lux en dessous duquel allumer | 15 lx |
+| `night_boolean` | `input_boolean` mode nuit | — |
+| `scene_day` | Scène à activer le jour (optionnel) | — |
+| `scene_night` | Scène à activer la nuit (optionnel) | — |
+| `inhibition_delay` | Délai d'inhibition après extinction manuelle | 15 s |
+| `silence_delay` | Délai sans mouvement avant extinction | 30 s |
+| `extinction_transition` | Durée de l'extinction progressive | 15 s |
+| `warning_effect` | Effet Zigbee d'avertissement (optionnel) | — |
 
 ---
 
-## 💬 Support
+## Ressources
 
-### Questions sur un Tutoriel?
-1. 📺 Regardez la vidéo complète pour le contexte
-2. 🔍 Consultez le README de la branche vidéo
-3. 🐛 Vérifiez les logs Home Assistant
-
-### Problèmes Rencontrés?
-- Consultez la vidéo pour une explication détaillée
-- Testez chaque composant indépendamment
-- Vérifiez `Settings → System → Logs` dans Home Assistant
-
----
-
-## 🎯 À Venir
-
-D'autres tutoriels vidéo seront ajoutés régulièrement. Restez à l'écoute!
-
----
-
-**Dernière mise à jour :** Juillet 2026 | **Créé avec ❤️ pour la communauté Home Assistant**
+- [Documentation Zigbee2MQTT — Binding](https://www.zigbee2mqtt.io/guide/usage/binding.html)
+- [Dépôt home-assistant-snippets](https://github.com/GuiPoM/home-assistant-snippets)
